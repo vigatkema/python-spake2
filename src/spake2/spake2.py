@@ -83,8 +83,8 @@ class _SPAKE2_Base:
         self._started = True
 
         g = self.params.group
-        self.xy_scalar = g.random_scalar(self.entropy_f)
-        self.xy_elem = g.Base.scalarmult(self.xy_scalar)
+        self.xy_scalar = g.random_scalar(self.entropy_f) # This is alpha
+        self.xy_elem = g.Base.scalarmult(self.xy_scalar) # G^alpha
         self.compute_outbound_message()
         # Guard against both sides using the same side= by adding a side byte
         # to the message. This is not included in the transcript hash at the
@@ -94,8 +94,8 @@ class _SPAKE2_Base:
 
     def compute_outbound_message(self):
         #message_elem = self.xy_elem + (self.my_blinding() * self.pw_scalar)
-        pw_blinding = self.my_blinding().scalarmult(self.pw_scalar)
-        message_elem = self.xy_elem.add(pw_blinding)
+        pw_blinding = self.my_blinding().scalarmult(self.pw_scalar) # This is M^pw
+        message_elem = self.xy_elem.add(pw_blinding) # G^alpha*M^pw
         self.outbound_message = message_elem.to_bytes()
 
     def finish(self, inbound_side_and_message):
@@ -105,15 +105,15 @@ class _SPAKE2_Base:
 
         self.inbound_message = self._extract_message(inbound_side_and_message)
 
-        g = self.params.group
-        inbound_elem = g.bytes_to_element(self.inbound_message)
+        g = self.params.group # this is obviously G
+        inbound_elem = g.bytes_to_element(self.inbound_message) # G^beta*N^pw
         if inbound_elem.to_bytes() == self.outbound_message:
             raise ReflectionThwarted
         #K_elem = (inbound_elem + (self.my_unblinding() * -self.pw_scalar)
         #          ) * self.xy_scalar
-        pw_unblinding = self.my_unblinding().scalarmult(-self.pw_scalar)
-        K_elem = inbound_elem.add(pw_unblinding).scalarmult(self.xy_scalar)
-        K_bytes = K_elem.to_bytes()
+        pw_unblinding = self.my_unblinding().scalarmult(-self.pw_scalar) # N^-pw
+        K_elem = inbound_elem.add(pw_unblinding).scalarmult(self.xy_scalar) # (v*N^-pw)^alpha
+        K_bytes = K_elem.to_bytes() # also known as w
         key = self._finalize(K_bytes)
         return key
 

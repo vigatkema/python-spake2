@@ -7,3 +7,5 @@
 /src/spake2.egg-info/
 /.cache/
 /coverage.xml
+venv/*
+__pycache__
